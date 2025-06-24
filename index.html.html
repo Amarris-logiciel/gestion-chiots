@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestion Chiots - WebApp</title>
+    <style>
+        #formDepense, #formChiot {
+            display: none;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            width: fit-content;
+        }
+    </style>
+    <script>
+        let chiots = [];
+        let depenses = [];
+
+        function sauvegarder() {
+            localStorage.setItem('chiots', JSON.stringify(chiots));
+            localStorage.setItem('depenses', JSON.stringify(depenses));
+        }
+
+        function charger() {
+            const dataChiots = localStorage.getItem('chiots');
+            const dataDepenses = localStorage.getItem('depenses');
+            if (dataChiots) chiots = JSON.parse(dataChiots);
+            if (dataDepenses) depenses = JSON.parse(dataDepenses);
+        }
+
+        function toggleFormDepense() {
+            const form = document.getElementById('formDepense');
+            form.style.display = (form.style.display === 'none') ? 'block' : 'none';
+        }
+
+        function toggleFormChiot() {
+            const form = document.getElementById('formChiot');
+            form.style.display = (form.style.display === 'none') ? 'block' : 'none';
+        }
+
+        function ajouterChiot() {
+            const nom = document.getElementById('nomChiot').value;
+            const naissance = document.getElementById('dateNaissance').value;
+            if (nom && naissance) {
+                chiots.push({ nom, naissance, statut: "STOCK", valeur: 0 });
+                document.getElementById('nomChiot').value = "";
+                document.getElementById('dateNaissance').value = "";
+                recalculerValeurs();
+                sauvegarder();
+                document.getElementById('formChiot').style.display = 'none';
+            }
+        }
+
+        function ajouterDepense() {
+            const montant = parseFloat(document.getElementById('montant').value);
+            const date = document.getElementById('dateDepense').value;
+            if (!isNaN(montant) && date) {
+                depenses.push({ montant, date });
+                recalculerValeurs();
+                document.getElementById('montant').value = "";
+                document.getElementById('dateDepense').value = "";
+                document.getElementById('formDepense').style.display = 'none';
+                sauvegarder();
+            }
+        }
+
+        function recalculerValeurs() {
+            const chiotsStock = chiots.filter(c => c.statut === "STOCK");
+            const totalDepenses = depenses.reduce((acc, d) => acc + d.montant, 0);
+            const valeurParChiot = chiotsStock.length ? totalDepenses / chiotsStock.length : 0;
+
+            chiots.forEach(c => {
+                if (c.statut === "STOCK") {
+                    c.valeur = valeurParChiot;
+                }
+            });
+            rafraichirChiots();
+        }
+
+        function changerStatut(index, nouveauStatut) {
+            if (chiots[index].statut === "STOCK") {
+                chiots[index].valeur = chiots[index].valeur;
+            }
+            chiots[index].statut = nouveauStatut;
+            recalculerValeurs();
+            sauvegarder();
+        }
+
+        function annulerOperation(index) {
+            chiots[index].statut = "STOCK";
+            recalculerValeurs();
+            sauvegarder();
+        }
+
+        function rafraichirChiots() {
+            const tableau = document.getElementById('listeChiots');
+            tableau.innerHTML = "";
+            chiots.forEach((c, i) => {
+                const row = `<tr>
+                    <td>${c.nom}</td>
+                    <td>${c.naissance}</td>
+                    <td>${c.statut}</td>
+                    <td>${c.valeur.toFixed(2)} €</td>
+                    <td>
+                        <button onclick="changerStatut(${i}, 'INVEST')">Invest</button>
+                        <button onclick="changerStatut(${i}, 'VENDU')">Vendu</button>
+                        <button onclick="annulerOperation(${i})">Annuler</button>
+                    </td>
+                </tr>`;
+                tableau.innerHTML += row;
+            });
+        }
+
+        window.onload = function () {
+            charger();
+            rafraichirChiots();
+        };
+    </script>
+</head>
+<body>
+    <h1>Gestion de Chiots</h1>
+
+    <button onclick="toggleFormChiot()">Ajouter un chiot</button>
+    <div id="formChiot">
+        <h3>Nouveau chiot</h3>
+        <label>Nom : <input type="text" id="nomChiot"></label><br>
+        <label>Date de naissance : <input type="date" id="dateNaissance"></label><br>
+        <button onclick="ajouterChiot()">Ajouter</button>
+    </div>
+
+    <button onclick="toggleFormDepense()">Ajouter une dépense</button>
+    <div id="formDepense">
+        <h3>Nouvelle dépense</h3>
+        <label>Montant (€): <input type="number" id="montant"></label><br>
+        <label>Date: <input type="date" id="dateDepense"></label><br>
+        <button onclick="ajouterDepense()">Valider</button>
+    </div>
+
+    <h3>Liste des chiots</h3>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Nom</th><th>Naissance</th><th>Statut</th><th>Valeur</th><th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="listeChiots"></tbody>
+    </table>
+</body>
+</html>
